@@ -1,7 +1,7 @@
 // import { Client, multisign, Payment, SignerListSet, Transaction, Wallet, xrpToDrops } from 'xrpl';
 import dotenv from 'dotenv';
 
-import { Client } from "xrpl";
+import { Client, xrpToDrops } from "xrpl";
 import { acquireTokens, AmmInfo, checkExistsAmm, confirmAmm, createAmm, depositAmm, get_new_token, getAmmcost, TokenInfo } from "./amm";
 
 dotenv.config();
@@ -222,14 +222,14 @@ async function setupAmmNoXRP(token1: string, token2: string, token1Amount: strin
   // console.log("account_lines_result:", account_lines_result)
   console.log("ammAddress:", ammInfo.issuer)
 
-  // deposit AMM
-  await depositAmm(client, wallet, msh_amount, token1Amount, foo_amount, token2Amount);
-  console.log({
-    token1: msh_amount,
-    token1Issuer: msh_amount.issuer,
-    token2: foo_amount,
-    token2Issuer: foo_amount.issuer
-  });
+  // // deposit AMM
+  // await depositAmm(client, wallet, msh_amount, token1Amount, foo_amount, token2Amount);
+  // console.log({
+  //   token1: msh_amount,
+  //   token1Issuer: msh_amount.issuer,
+  //   token2: foo_amount,
+  //   token2Issuer: foo_amount.issuer
+  // });
   return {
     token1: msh_amount,
     token1Issuer: msh_amount.issuer,
@@ -263,7 +263,7 @@ async function setupAmmXRP(token: string, tokenAmount: string, xrpAmount: string
   // create XRP Amount info
   const xrpInfo: TokenInfo = {
     "currency": null,
-    "value": "1000",
+    "value":xrpToDrops(xrpAmount), 
     "issuer": null
   }
 
@@ -281,12 +281,13 @@ async function setupAmmXRP(token: string, tokenAmount: string, xrpAmount: string
   } = await confirmAmm(client, wallet, amm_info_request2);
 
   console.log("ammAddress2:", ammInfo2.issuer)
-  // deposit AMM
-  await depositAmm(client, wallet, msh_amount, tokenAmount, xrpInfo, xrpAmount)
+  // // deposit AMM
+  // await depositAmm(client, wallet, msh_amount, tokenAmount, xrpInfo, xrpAmount)
   console.log({
     token: msh_amount,
     tokenIssuer: msh_amount.issuer,
   });
+
   return {
     token: msh_amount,
     tokenIssuer: msh_amount.issuer,

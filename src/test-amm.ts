@@ -146,13 +146,16 @@ async function main() {
   } = await confirmAmm(client, wallet, amm_info_request2);
   
   // console.log("account_lines_result:", account_lines_result)
-  console.log("ammAddress2:", ammInfo2.issuer)
+  console.log("ammAddress2:", ammInfo2)
   // deposit AMM
-  await depositAmm(client, wallet, msh_amount, "15", xrpInfo, "10")
-  // withdraw AMM
-  await withdrawAmm(client, wallet, msh_amount, "5", xrpInfo, "5")
+  // await depositAmm(client, wallet, msh_amount, "15", xrpInfo, "10")
+  // // withdraw AMM
+  // await withdrawAmm(client, wallet, msh_amount, "5", xrpInfo, "5")
   // Swap (payment Transaction) XRP ->> MSH
   await swap(client, wallet, ammInfo2.issuer, msh_amount, xrpInfo, "1", "2000000")
+
+  // console.log("done");
+  // return;
   // Swap (payment Transaction) MSH ->> XRP
   await swap(client, wallet, ammInfo2.issuer, xrpInfo, msh_amount, "2000", "1")
 

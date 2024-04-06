@@ -4,34 +4,15 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { connectToXrpl } from "../xrplUtils";
 import { MultiSigLoginData } from "../xrplUtils";
+import { AmmInfo, confirmAmm, swap, TokenInfo } from "../amm";
 
 dotenv.config();
 
-// signers = [address, weight]
-const setupMultisig = async (client: Client, multisigWallet: Wallet, signers: [string, number][], quorum: number) => {
-  const signerEntries = signers.map(signer => ({
-    SignerEntry: {
-      Account: signer[0],
-      SignerWeight: signer[1]
-    }
-  }));
+export interface Tx {
+  txType: "Payment" | "Swap";
+}
 
-  const transaction = {
-    TransactionType: 'SignerListSet',
-    Account: multisigWallet.address,
-    SignerQuorum: quorum,
-    SignerEntries: signerEntries
-  } satisfies SignerListSet;
-
-  const prepared = await client.autofill(transaction);
-  const signed = multisigWallet.sign(prepared);
-
-  const result = await client.submit(signed.tx_blob);
-  console.log("setup result: ", result);
-};
-
-export interface PaymentRequestData {
-  txType: "Payment";
+export interface PaymentRequestData extends Tx {
   multisigAddress: string;
   loginData: {
     login: string;
@@ -41,6 +22,15 @@ export interface PaymentRequestData {
   amount: string; // in drops (smallest unit of XRP)
   loginService: "true" | "false";
   fee: string;
+}
+
+export interface MultisigSwapData extends Tx {
+  login: string;
+  password: string;
+  token1: TokenInfo;
+  token2: TokenInfo;
+  tokenIn: { currency: string | null, amount: string };
+  tokenOut: { currency: string| null, amount: string };
 }
 
 
@@ -87,16 +77,64 @@ router.post("/", async (req: Request, res: Response) => {
       }
 
     } else if (data.txType === "Swap") {
-      res.status(400).send({
-        error: "Swap tx not implemented yet"
-      });
+      const body: MultisigSwapData = req.body;
+
+      const userAccount = Wallet.fromEntropy(Buffer.from(
+        crypto
+          .createHash('sha256')
+          .update(body.login + body.password)
+          .digest()
+          .toString('hex')
+      ))
+      // console.log("userWallet: ", userWallet.address);
+
+      console.log("1");
+      // await client.fundWallet(userAccount); // todo: remove
+
+      ///////////////////// GET AMM INFO /////////////////////
+      // create AMM Info
+      const amm_info_request: AmmInfo = {
+        "command": "amm_info",
+        "asset": {
+          "currency": "XRP",//body.token1.currency!, ///// todo: remove hardcoded values
+          "issuer": null, // body.token1.issuer!,
+        },
+        "asset2": {
+          "currency": body.token2.currency!,
+          "issuer": body.token2.issuer!
+        },
+        "ledger_index": "validated"
+      }
+
+      // console.log("amm_info_request: ", amm_info_request);
+      console.log({ address: body.token1.issuer?? body.token2.issuer })
+      const {
+        account_lines_result: account_lines_result,
+        ammInfo: ammInfo
+      } = await confirmAmm(client, { address: body.token1.issuer?? body.token2.issuer }, amm_info_request);
+      console.log("amm confirmed? ", account_lines_result, ammInfo);
+      ///////////////////// SWAP /////////////////////
+      const outputInfo = body.token1,
+       inputInfo = body.token2;
+      // Swap (payment Transaction) input ->> output
+      const txHash = await swap(client, userAccount, ammInfo.issuer, outputInfo, inputInfo, body.tokenIn.amount, body.tokenOut.amount);
+
+      if(txHash.length > 0) {
+        res.status(200).send({
+          message: "tx broadcasted successfully",
+          hash: txHash
+        });
+      } else {
+        res.status(500).send({
+          error: "Error while swapping"
+        });
+      }
+
     } else {
       res.status(400).send({
         error: "Invalid txType"
       });
     }
-
-
 
     await client.disconnect();
   } catch (e) {

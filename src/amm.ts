@@ -1,4 +1,4 @@
-import { AccountSetAsfFlags, dropsToXrp, getBalanceChanges, xrpToDrops } from "xrpl";
+import { AccountSetAsfFlags, dropsToXrp, getBalanceChanges, Wallet, xrpToDrops } from "xrpl";
 
 
 export type TokenInfo = {
@@ -25,7 +25,7 @@ const EXPLORER = "https://devnet.xrpl.org";
 /**
  * get token method
  */
-export const acquireTokens = async(
+export const acquireTokens = async (
   client: any,
   wallet: any,
   token: TokenInfo,
@@ -39,22 +39,22 @@ export const acquireTokens = async(
         issuer: token.issuer,
         value: "1000"
       },
-      "TakerGets": xrpToDrops(25*10*1.16)
+      "TakerGets": xrpToDrops(25 * 10 * 1.16)
     }, {
-      autofill: true, 
+      autofill: true,
       wallet: wallet
     })
 
     // get metaData & TransactionResult
     const metaData: any = offer_result.result.meta!;
     const transactionResult = metaData.TransactionResult;
-  
+
     if (transactionResult == "tesSUCCESS") {
       console.log(`MSH offer placed: ${EXPLORER}/transactions/${offer_result.result.hash}`)
       const balance_changes = getBalanceChanges(metaData)
-  
+
       for (const bc of balance_changes) {
-        if (bc.account != wallet.address) {continue}
+        if (bc.account != wallet.address) { continue }
         for (const bal of bc.balances) {
           if (bal.currency == "MSH") {
             console.log(`Got ${bal.value} ${bal.currency}.${bal.issuer}.`)
@@ -63,11 +63,11 @@ export const acquireTokens = async(
         }
         break
       }
-  
+
     } else {
       throw `Error sending transaction: ${offer_result}`
     }
-  } catch(err) {
+  } catch (err) {
     console.error("Acquire tokens err: ", err)
   }
 };
@@ -77,7 +77,7 @@ export const acquireTokens = async(
  */
 export const checkExistsAmm = async (
   client: any,
-  amm_info_request: AmmInfo, 
+  amm_info_request: AmmInfo,
   token1Info: TokenInfo,
   token2Info: TokenInfo,
 ) => {
@@ -85,9 +85,9 @@ export const checkExistsAmm = async (
   try {
     const amm_info_result = await client.request(amm_info_request)
     console.log(amm_info_result)
-  } catch(err: any) {
+  } catch (err: any) {
     if (err.data.error === 'actNotFound') {
-      if(token2Info.issuer != null) {
+      if (token2Info.issuer != null) {
         console.log(`No AMM exists yet for the pair
           ${token2Info.currency}.${token2Info.issuer} /
           ${token1Info.currency}.${token1Info.issuer}
@@ -99,7 +99,7 @@ export const checkExistsAmm = async (
           (This is probably as expected.)`)
       }
     } else {
-      throw(err)
+      throw (err)
     }
   }
 };
@@ -107,7 +107,7 @@ export const checkExistsAmm = async (
 /**
  * get const info for craete carete AMM pair
  */
-export const getAmmcost = async(
+export const getAmmcost = async (
   client: any
 ): Promise<string> => {
   const ss = await client.request({
@@ -122,7 +122,7 @@ export const getAmmcost = async(
 /**
  * create AMM method
  */
-export const createAmm = async(
+export const createAmm = async (
   client: any,
   wallet: any,
   token1Info: TokenInfo,
@@ -131,7 +131,7 @@ export const createAmm = async(
 ) => {
   try {
     var ammcreate_result;
-    if(token2Info.currency != null) {
+    if (token2Info.currency != null) {
       ammcreate_result = await client.submitAndWait({
         "TransactionType": "AMMCreate",
         "Account": wallet.address,
@@ -148,8 +148,8 @@ export const createAmm = async(
         "TradingFee": 500, // 0.5%
         "Fee": amm_fee_drops
       }, {
-        autofill: true, 
-        wallet: wallet, 
+        autofill: true,
+        wallet: wallet,
         failHard: true
       })
     } else {
@@ -165,8 +165,8 @@ export const createAmm = async(
         "TradingFee": 500, // 0.5%
         "Fee": amm_fee_drops
       }, {
-        autofill: true, 
-        wallet: wallet, 
+        autofill: true,
+        wallet: wallet,
         failHard: true
       })
     }
@@ -174,14 +174,14 @@ export const createAmm = async(
     // get metaData & TransactionResult
     const metaData: any = ammcreate_result.result.meta!;
     const transactionResult = metaData.TransactionResult;
-  
+
     // Use fail_hard so you don't waste the tx cost if you mess up
     if (transactionResult == "tesSUCCESS") {
       console.log(`AMM created: ${EXPLORER}/transactions/${ammcreate_result.result.hash}`)
     } else {
       throw `Error sending transaction: ${JSON.stringify(ammcreate_result)}`
     }
-  } catch(err) {
+  } catch (err) {
     console.error("create amm err:", err)
   }
 }
@@ -189,60 +189,69 @@ export const createAmm = async(
 /**
  * confirm AMM method
  */
-export const confirmAmm = async(
+export const confirmAmm = async (
   client: any,
   wallet: any,
   amm_info_request: AmmInfo
 ): Promise<any> => {
-  try {
-    // get AMM info
-    const amm_info_result2 = await client.request(amm_info_request)
-    console.log("amm_info_result2:", amm_info_result2)
+  // try {
+  // get AMM info
+  console.log(amm_info_request);
+  const amm_info_result2 = await client.request(amm_info_request)
+  console.log("amm_info_result2:", amm_info_result2)
 
-    const results = amm_info_result2.result as any;
+  const results = amm_info_result2.result as any;
 
-    const lp_token = results.amm.lp_token
-    const amount = results.amm.amount
-    const amount2 = results.amm.amount2
+  const lp_token = results.amm.lp_token
+  const amount = results.amm.amount
+  const amount2 = results.amm.amount2
 
-    const ammInfo: TokenInfo = {
-      "currency": lp_token.currency,
-      "issuer": lp_token.issuer,
-      "value": "0"
-    }
-
-    console.log(`The AMM account ${lp_token.issuer} has ${lp_token.value} total
-                LP tokens outstanding, and uses the currency code ${lp_token.currency}.`)
-    if(amount2.currency != undefined) {
-      console.log(`In its pool, the AMM holds ${amount.value} ${amount.currency}.${amount.issuer}
-                   and ${amount2.value} ${amount2.currency}.${amount2.issuer}`)
-    } else {
-      console.log(`In its pool, the AMM holds ${amount.value} ${amount.currency}.${amount.issuer}
-                   and ${amount2} XRP`)
-    }
-
-    // check balanse
-    const account_lines_result = await client.request({
-      "command": "account_lines",
-      "account": wallet.address,
-      // Tip: To look up only the new AMM's LP Tokens, uncomment:
-      // "peer": lp_token.issuer,
-      "ledger_index": "validated"
-    })
-    return {
-      account_lines_result,
-      ammInfo
-    };
-  } catch(err) {
-    console.error("Check token balances err:", err)
-    return null;
+  const ammInfo: TokenInfo = {
+    "currency": lp_token.currency,
+    "issuer": lp_token.issuer,
+    "value": "0"
   }
+
+  console.log(`The AMM account ${lp_token.issuer} has ${lp_token.value} total
+                LP tokens outstanding, and uses the currency code ${lp_token.currency}.`)
+  if (amount2.currency != undefined) {
+    console.log(`In its pool, the AMM holds ${amount.value} ${amount.currency}.${amount.issuer}
+                   and ${amount2.value} ${amount2.currency}.${amount2.issuer}`)
+  } else {
+    console.log(`In its pool, the AMM holds ${amount.value} ${amount.currency}.${amount.issuer}
+                   and ${amount2} XRP`)
+  }
+
+  // check balance
+  console.log(wallet);
+  console.log("account_lines_result: ", {
+    "command": "account_lines",
+    "account": wallet.address,
+    // Tip: To look up only the new AMM's LP Tokens, uncomment:
+    // "peer": lp_token.issuer,
+    "ledger_index": "validated"
+  })
+  const account_lines_result = await client.request({
+    "command": "account_lines",
+    "account": wallet.address,
+    // Tip: To look up only the new AMM's LP Tokens, uncomment:
+    // "peer": lp_token.issuer,
+    "ledger_index": "validated"
+  })
+  return {
+    account_lines_result,
+    ammInfo
+  };
+  // } catch(err) {
+  //   console.error("Check token balances err:", err)
+  //   return null;
+  // }
 }
 
 /**
  * bid AMM method
  */
-export const bidAmm = async(
+export const bidAmm = async (
   client: any,
   wallet: any,
   token1Info: TokenInfo,
@@ -261,28 +270,28 @@ export const bidAmm = async(
         "currency": token2Info.currency,
         "issuer": token2Info.issuer,
       },
-      "BidMax" : {
-        "currency" : ammInfo.currency,
-        "issuer" : ammInfo.issuer,
-        "value" : "5"
+      "BidMax": {
+        "currency": ammInfo.currency,
+        "issuer": ammInfo.issuer,
+        "value": "5"
       },
     }, {
-      autofill: true, 
-      wallet: wallet, 
+      autofill: true,
+      wallet: wallet,
       failHard: true
     })
 
     // get metaData & TransactionResult
     const metaData: any = result.result.meta!;
     const transactionResult = metaData.TransactionResult;
-  
+
     // Use fail_hard so you don't waste the tx cost if you mess up
     if (transactionResult == "tesSUCCESS") {
       console.log(`AMM bid: ${EXPLORER}/transactions/${result.result.hash}`)
     } else {
       throw `Error sending transaction: ${JSON.stringify(result)}`
     }
-  } catch(err) {
+  } catch (err) {
     console.error("error occuered while bidAmm:", err)
   }
 };
@@ -290,7 +299,7 @@ export const bidAmm = async(
 /**
  * vote AMM method
  */
-export const voteAmm = async(
+export const voteAmm = async (
   client: any,
   wallet: any,
   token1Info: TokenInfo,
@@ -309,24 +318,24 @@ export const voteAmm = async(
         "currency": token2Info.currency,
         "issuer": token2Info.issuer,
       },
-      "TradingFee" : tradingFee,
+      "TradingFee": tradingFee,
     }, {
-      autofill: true, 
-      wallet: wallet, 
+      autofill: true,
+      wallet: wallet,
       failHard: true
     })
 
     // get metaData & TransactionResult
     const metaData: any = result.result.meta!;
     const transactionResult = metaData.TransactionResult;
-  
+
     // Use fail_hard so you don't waste the tx cost if you mess up
     if (transactionResult == "tesSUCCESS") {
       console.log(`AMM vote: ${EXPLORER}/transactions/${result.result.hash}`)
     } else {
       throw `Error sending transaction: ${JSON.stringify(result)}`
     }
-  } catch(err) {
+  } catch (err) {
     console.error("error occuered while voteAmm:", err)
   }
 };
@@ -334,7 +343,7 @@ export const voteAmm = async(
 /**
  * deposit AMM 
  */
-export const depositAmm = async(
+export const depositAmm = async (
   client: any,
   wallet: any,
   token1Info: TokenInfo,
@@ -344,7 +353,7 @@ export const depositAmm = async(
 ) => {
   try {
     var result;
-    if(token2Info.currency != null) {
+    if (token2Info.currency != null) {
       result = await client.submitAndWait({
         "TransactionType": "AMMDeposit",
         "Account": wallet.address,
@@ -366,10 +375,10 @@ export const depositAmm = async(
           "currency": token2Info.currency,
           "issuer": token2Info.issuer,
         },
-        "Flags" : 1048576,
+        "Flags": 1048576,
       }, {
-        autofill: true, 
-        wallet: wallet, 
+        autofill: true,
+        wallet: wallet,
         failHard: true
       })
     } else {
@@ -386,29 +395,29 @@ export const depositAmm = async(
           "currency": token1Info.currency,
           "issuer": token1Info.issuer,
         },
-        "Asset2": { 
+        "Asset2": {
           "currency": "XRP"
         },
-        "Flags" : 1048576,
+        "Flags": 1048576,
       }, {
-        autofill: true, 
-        wallet: wallet, 
+        autofill: true,
+        wallet: wallet,
         failHard: true
       })
     }
-    
+
 
     // get metaData & TransactionResult
     const metaData: any = result.result.meta!;
     const transactionResult = metaData.TransactionResult;
-  
+
     // Use fail_hard so you don't waste the tx cost if you mess up
     if (transactionResult == "tesSUCCESS") {
       console.log(`AMM deposit: ${EXPLORER}/transactions/${result.result.hash}`)
     } else {
       throw `Error sending transaction: ${JSON.stringify(result)}`
     }
-  } catch(err) {
+  } catch (err) {
     console.error("error occuered while depositAmm:", err)
   }
 };
@@ -416,7 +425,7 @@ export const depositAmm = async(
 /**
  * Withdraw AMM
  */
-export const withdrawAmm = async(
+export const withdrawAmm = async (
   client: any,
   wallet: any,
   token1Info: TokenInfo,
@@ -426,8 +435,8 @@ export const withdrawAmm = async(
 ) => {
   try {
     var result;
-    
-    if(token2Info.currency != null) { 
+
+    if (token2Info.currency != null) {
       result = await client.submitAndWait({
         "TransactionType": "AMMWithdraw",
         "Account": wallet.address,
@@ -449,11 +458,11 @@ export const withdrawAmm = async(
           "currency": token2Info.currency,
           "issuer": token2Info.issuer,
         },
-        "Fee" : "10",
-        "Flags" : 1048576,
+        "Fee": "10",
+        "Flags": 1048576,
       }, {
-        autofill: true, 
-        wallet: wallet, 
+        autofill: true,
+        wallet: wallet,
         failHard: true
       })
     } else {
@@ -473,11 +482,11 @@ export const withdrawAmm = async(
         "Asset2": {
           "currency": "XRP"
         },
-        "Fee" : "10",
-        "Flags" : 1048576,
+        "Fee": "10",
+        "Flags": 1048576,
       }, {
-        autofill: true, 
-        wallet: wallet, 
+        autofill: true,
+        wallet: wallet,
         failHard: true
       })
     }
@@ -485,14 +494,14 @@ export const withdrawAmm = async(
     // get metaData & TransactionResult
     const metaData: any = result.result.meta!;
     const transactionResult = metaData.TransactionResult;
-  
+
     // Use fail_hard so you don't waste the tx cost if you mess up
     if (transactionResult == "tesSUCCESS") {
       console.log(`AMM withdraw: ${EXPLORER}/transactions/${result.result.hash}`)
     } else {
       throw `Error sending transaction: ${JSON.stringify(result)}`
     }
-  } catch(err) {
+  } catch (err) {
     console.error("error occuered while withdrawAmm:", err)
   }
 };
@@ -500,39 +509,88 @@ export const withdrawAmm = async(
 /**
  * Swap method
  */
-export const swap = async(
+export const swap = async (
   client: any,
-  wallet: any,
+  wallet: Wallet,
   ammAddress: string,
   token1Info: TokenInfo,
   token2Info: TokenInfo,
   token1Value: string,
   token2Value: string
-) => {
+): Promise<string> => {
   client.on('path_find', (stream: any) => {
     console.log(JSON.stringify(stream.alternatives, null, '  '))
   })
+  ///////////////////////////////////
+  // if the wallet has no trustline with the amm, create one
+  const trustSetTx = {
+    "TransactionType": "TrustSet",
+    "Account": wallet.address,
+    "LimitAmount": {
+      "currency": token2Info.currency,
+      "issuer": ammAddress,
+      "value": (Number(token2Value) * 100).toString()
+    }
+  }
+
+  const autofilledTrustSetTx = await client.autofill(trustSetTx)
+  const signedTrustSetTx = wallet.sign(autofilledTrustSetTx)
+  const trustSetResult = await client.submitAndWait(signedTrustSetTx.tx_blob)
+  console.log("trustSetResult:", trustSetResult);
+
+  /////////////////////////////////////
+
   // path find
-  var result; 
-  
-  if(token1Info.currency != null && token2Info.currency != null) { 
+  var result;
+  console.log("token1Info:", token1Info);
+  if (token1Info.currency != null && token2Info.currency != null) {
+    console.log("path find:", {
+      command: 'path_find',
+      subcommand: 'create',
+      source_account: wallet.address,
+      source_amount: {
+        "currency": token2Info.currency,
+        "value": token2Value,
+        "issuer": token2Info.issuer
+      },
+      destination_account: wallet.address,
+      destination_amount: {
+        "currency": token1Info.currency,
+        "value": token1Value,
+        "issuer": token1Info.issuer
+      }
+    })
     result = await client.request({
       command: 'path_find',
       subcommand: 'create',
       source_account: wallet.address,
       source_amount: {
-        "currency": token2Info.currency,  
-        "value": token2Value,                   
+        "currency": token2Info.currency,
+        "value": token2Value,
         "issuer": token2Info.issuer
       },
       destination_account: wallet.address,
       destination_amount: {
-        "currency": token1Info.currency,  
-        "value": token1Value,                   
+        "currency": token1Info.currency,
+        "value": token1Value,
         "issuer": token1Info.issuer
       }
     });
-  } else if(token2Info.currency == null) {
+  } else if (token2Info.currency == null) {
+    console.log("path find:", {
+      command: 'path_find',
+      subcommand: 'create',
+      source_account: wallet.address,
+      source_amount: {
+        "currency": "XRP",
+      },
+      destination_account: wallet.address,
+      destination_amount: {
+        "currency": token1Info.currency,
+        "value": token1Value,
+        "issuer": token1Info.issuer
+      }
+    });
     result = await client.request({
       command: 'path_find',
       subcommand: 'create',
@@ -542,29 +600,60 @@ export const swap = async(
       },
       destination_account: wallet.address,
       destination_amount: {
-        "currency": token1Info.currency,  
-        "value": token1Value,                   
+        "currency": token1Info.currency,
+        "value": token1Value,
         "issuer": token1Info.issuer
       }
     });
-  } 
+  } else if (token1Info.currency == null) { /////
+    console.log("path find:", {
+      command: 'path_find',
+      subcommand: 'create',
+      source_account: wallet.address,
+      source_amount: {
+        "currency": token2Info.currency,
+        "value": token2Value,
+        "issuer": token2Info.issuer
+      },
+      destination_account: wallet.address,
+      destination_amount: {
+        "currency": "XRP",
+      }
+    });
+    result = await client.request({
+      command: 'path_find',
+      subcommand: 'create',
+      destination_account: wallet.address,
+      destination_amount: {
+        "currency": token2Info.currency,
+        "value": token2Value,
+        "issuer": token2Info.issuer
+      },
+      source_account: wallet.address,
+      source_amount: {
+        "currency": "XRP",
+      }
+    });
+  }
+
+  console.log("part 1 ended");
 
   // console.log("path find:", result)
 
   // create swap transaction data
   var swapTxData;
-  if(token1Info.currency != null && token2Info.currency != null) { 
+  if (token1Info.currency != null && token2Info.currency != null) {
     swapTxData = {
       "TransactionType": "Payment",
       "Account": wallet.address,
-      "Destination": wallet.address,      
+      "Destination": wallet.address,
       "Amount": {
-        "currency": token1Info.currency,        
-        "value": token1Value,                   
+        "currency": token1Info.currency,
+        "value": token1Value,
         "issuer": token1Info.issuer
       },
       "SendMax": {
-        "currency": token2Info.currency,  
+        "currency": token2Info.currency,
         "value": token2Value,
         "issuer": token2Info.issuer
       },
@@ -586,10 +675,10 @@ export const swap = async(
     swapTxData = {
       "TransactionType": "Payment",
       "Account": wallet.address,
-      "Destination": wallet.address,      
+      "Destination": wallet.address,
       "Amount": {
-        "currency": token1Info.currency,       
-        "value": token1Value,                  
+        "currency": token1Info.currency,
+        "value": token1Value,
         "issuer": token1Info.issuer
       },
       "SendMax": token2Value,
@@ -607,11 +696,11 @@ export const swap = async(
     swapTxData = {
       "TransactionType": "Payment",
       "Account": wallet.address,
-      "Destination": wallet.address,      
+      "Destination": wallet.address,
       "Amount": token1Value,
       "SendMax": {
-        "currency": token2Info.currency,        
-        "value": token2Value,                   
+        "currency": token2Info.currency,
+        "value": token2Value,
         "issuer": token2Info.issuer
       },
       "Paths": [
@@ -624,20 +713,22 @@ export const swap = async(
       ]
     }
   }
-  
+
+  console.log("swapTxData:", swapTxData);
+
   try {
     const pay_prepared = await client.autofill(swapTxData);
-    
+
     const pay_signed = wallet.sign(pay_prepared);
-    
+
     if (token1Info.currency != null) {
       console.log(`Sending ${token1Info.value} ${token1Info.currency} to ${ammAddress}...`)
-    } else if(token2Info.currency == null) {
+    } else if (token2Info.currency == null) {
       console.log(`Sending ${token2Info.value} ${token2Info.currency} to ${ammAddress}...`)
     }
-    
-    const pay_result = await client.submitAndWait(pay_signed.tx_blob);
 
+    const pay_result = await client.submitAndWait(pay_signed.tx_blob);
+    console.log("pay_result:", pay_result);
     if (pay_result.result.meta.TransactionResult == "tesSUCCESS") {
       console.log(`Transaction succeeded: ${EXPLORER}/transactions/${pay_signed.hash}`)
     } else {
@@ -653,8 +744,11 @@ export const swap = async(
       ledger_index: "validated"
     })
     console.log("wallet address's balance:", balances.result);
-  } catch(err) {
-    console.error("error occuered while swaping:", err);
+
+    return pay_signed.hash;
+  } catch (err) {
+    console.error("error occurred while swapping:", err);
+    return "";
   }
 };
 
@@ -687,7 +781,7 @@ export const swap = async(
 export const get_new_token = async (
   client: any,
   wallet: any,
-  currency_code: string, 
+  currency_code: string,
   issue_quantity: string
 ) => {
   // Get credentials from the Testnet Faucet -----------------------------------
@@ -701,9 +795,9 @@ export const get_new_token = async (
     "Account": issuer.address,
     "SetFlag": AccountSetAsfFlags.asfDefaultRipple
   }, {
-    autofill: true, 
+    autofill: true,
     wallet: issuer
-  } )
+  })
 
   // get metaData & TransactionResult
   const metaData: any = issuer_setup_result.result.meta!;
@@ -725,7 +819,7 @@ export const get_new_token = async (
       "value": "10000000000" // Large limit, arbitrarily chosen
     }
   }, {
-    autofill: true, 
+    autofill: true,
     wallet: wallet
   })
 
@@ -750,7 +844,7 @@ export const get_new_token = async (
     },
     "Destination": wallet.address
   }, {
-    autofill: true, 
+    autofill: true,
     wallet: issuer
   })
 

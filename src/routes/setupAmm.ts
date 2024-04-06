@@ -37,7 +37,7 @@ const router: Router = Router();
 router.use(json());
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const client = await connectToXrpl();
+   const client = await connectToXrpl();
 
     await client.disconnect();
     // return the multisig address and the signers addresses

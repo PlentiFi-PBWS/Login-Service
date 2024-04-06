@@ -2,6 +2,8 @@ import { multisign, SignerListSet, Wallet } from "xrpl";
 import { connectToXrpl } from "../src/xrplUtils";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import { MultisigSwapData } from "../src/routes/tx";
+import { TokenInfo } from "../src/amm";
 
 dotenv.config();
 
@@ -66,15 +68,15 @@ async function test() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-        multisigAddress: data.multisigAddress,
-        newSigners: updatedSignerEntries,
-        quorum: 2,
-        loginData: loginData,
+      multisigAddress: data.multisigAddress,
+      newSigners: updatedSignerEntries,
+      quorum: 2,
+      loginData: loginData,
     }),
   });
 
   console.log(await response2.json());
-  
+
   await client.disconnect();
   //////////////////////////
 
@@ -100,4 +102,39 @@ async function test() {
   console.log(await response3.json());
 }
 
-test().then(() => console.log("done"));
+// test().then(() => console.log("done"));
+
+
+
+
+const body = {
+  txType: "Swap",
+  login: "string",
+  password: "string",
+  token1: {
+    currency: null,
+    value: "100000",
+    issuer: null
+  } satisfies TokenInfo,
+  token2: {
+    currency: 'TST',
+    value: '1',
+    issuer: 'rnzKj7qNm5ntyogctbQtNVCPnntMpeizx8',
+} satisfies TokenInfo,
+  tokenIn: { currency: null, amount: "1" },
+  tokenOut: { currency: 'TST', amount: "15" },
+} satisfies MultisigSwapData;
+
+async function testSwap() {
+  const response = await fetch("http://localhost:3001/tx", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  console.log(await response.json());
+}
+
+testSwap().then(() => console.log("done"));

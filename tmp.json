@@ -1,0 +1,14 @@
+{
+  "command": "path_find",
+  "subcommand": "create",
+  "source_account": "rPCKEvHS5pfbv9rmeyD9XHw4VDVUcB1hBA",
+  "source_amount": {
+    "currency": "TST",
+    "value": "200000",
+    "issuer": "rnzKj7qNm5ntyogctbQtNVCPnntMpeizx8"
+  },
+  "destination_account": "rPCKEvHS5pfbv9rmeyD9XHw4VDVUcB1hBA",
+  "destination_amount": {
+    "currency": "XRP"
+  }
+}
