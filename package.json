@@ -1,0 +1,35 @@
+{
+  "name": "plentifi-signing-server",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.ts",
+  "module": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "start-nodemon": "nodemon --exec ts-node src/index.ts",
+    "test": "ts-node test/test.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "fmt:check": "npm run prettier && npm run lint",
+    "fmt": "npm run prettier:fix && npm run lint:fix"
+  },
+  "author": "Elli610",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.0",
+    "ts-node": "^10.9.1",
+    "xrpl": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.2",
+    "@typescript-eslint/eslint-plugin": "^5.61.0",
+    "@typescript-eslint/parser": "^5.61.0",
+    "eslint": "^8.44.0"
+  }
+}
