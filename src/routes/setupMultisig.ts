@@ -15,7 +15,7 @@ const setupMultisig = async (client: Client, multisigWallet: Wallet, signers: [s
       SignerWeight: signer[1]
     }
   }));
-
+console.log("signers addresses: ", signers.map(signer => signer[0]));
   const transaction = {
     TransactionType: 'SignerListSet',
     Account: multisigWallet.address,
@@ -52,6 +52,8 @@ router.post("/", async (req: Request, res: Response) => {
     const secondSigner = Wallet.generate();
     const loginService = Wallet.fromSeed(process.env.LOGIN_SERVICE_SEED!);
     await client.fundWallet(multisig);
+    await client.fundWallet(firstSigner);
+    await client.fundWallet(secondSigner);
 
     const allSigners = [loginService.address, firstSigner.address, secondSigner.address];
 

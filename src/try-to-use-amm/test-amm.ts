@@ -52,7 +52,6 @@ async function main() {
   const msh_amount = await get_new_token(client, wallet, "MSH", "10000")
   const foo_amount = await get_new_token(client, wallet, "FOO", "1000")
 
-  const testWallet = Wallet.generate();
   // await client.fundWallet(testWallet);
   // const test = await get_new_token(client, testWallet, "MSH", "10000")
   // console.log(testWallet.address);

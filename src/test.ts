@@ -2,7 +2,7 @@
 import dotenv from 'dotenv';
 
 import { Client, xrpToDrops } from "xrpl";
-import { acquireTokens, AmmInfo, checkExistsAmm, confirmAmm, createAmm, depositAmm, get_new_token, getAmmcost, TokenInfo } from "./amm";
+import { acquireTokens, AmmInfo, checkExistsAmm, confirmAmm, createAmm, depositAmm, get_new_token, getAmmcost, TokenInfo } from "./try-to-use-amm/amm";
 
 dotenv.config();
 

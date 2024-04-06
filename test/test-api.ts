@@ -3,7 +3,7 @@ import { connectToXrpl } from "../src/xrplUtils";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import { MultisigSwapData } from "../src/routes/tx";
-import { TokenInfo } from "../src/amm";
+import { TokenInfo } from "../src/try-to-use-amm/amm";
 
 dotenv.config();
 
@@ -13,8 +13,8 @@ const loginData = {
 }
 
 async function test() {
-  // post loginData to http://localhost:3001/setup
-  const response = await fetch("http://localhost:3001/setup", {
+  // post loginData to http://localhost:3002/setup
+  const response = await fetch("http://localhost:3002/setup", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -62,7 +62,7 @@ async function test() {
 
   console.log(updatedSignerEntries);
 
-  const response2 = await fetch("http://localhost:3001/add", {
+  const response2 = await fetch("http://localhost:3002/add", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -80,7 +80,7 @@ async function test() {
   await client.disconnect();
   //////////////////////////
 
-  const response3 = await fetch("http://localhost:3001/tx", {
+  const response3 = await fetch("http://localhost:3002/tx", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -100,41 +100,39 @@ async function test() {
   });
 
   console.log(await response3.json());
-}
 
-// test().then(() => console.log("done"));
-
-
-
-
-const body = {
-  txType: "Swap",
-  login: "string",
-  password: "string",
-  token1: {
-    currency: null,
-    value: "100000",
-    issuer: null
-  } satisfies TokenInfo,
-  token2: {
-    currency: 'TST',
-    value: '1',
-    issuer: 'rnzKj7qNm5ntyogctbQtNVCPnntMpeizx8',
-} satisfies TokenInfo,
-  tokenIn: { currency: null, amount: "1" },
-  tokenOut: { currency: 'TST', amount: "15" },
-} satisfies MultisigSwapData;
-
-async function testSwap() {
-  const response = await fetch("http://localhost:3001/tx", {
+  const response0 = await fetch("http://localhost:3002/setupAmm", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      login: "string",
+      password: "string",
+      multisigAddress: data.multisigAddress,
+    }),
+  });
+  const response0Data = await response0.json();
+  console.log("init ended: ", response0Data);
+
+  const response12 = await fetch("http://localhost:3002/tx", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      txType: "Swap",
+      login: "string",
+      password: "string",
+      tokenIn: { currency: "XRP", amount: "10000000", issuer: null },
+      tokenOut: { currency: "WHT", amount: "121920", issuer: response0Data.currency.issuer },
+      poolSeed: response0Data.masterSeed,
+    }),
   });
 
-  console.log(await response.json());
+  console.log("swap ended: ", await response12.json());
 }
 
-testSwap().then(() => console.log("done"));
+// testSwap().then(() => console.log("done"));
+
+test().then(() => console.log("done"));
