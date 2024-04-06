@@ -4,6 +4,7 @@ import setupMultisig from "./routes/setupMultisig";
 import addSigners from "./routes/addSigners";
 import tx from "./routes/tx";
 import setupAmm from "./routes/setupAmm";
+import xrplBalance from "./routes/xrplBalance";
 
 //declare a new express app
 const app: Express = express();
@@ -19,6 +20,7 @@ app.use("/setup", setupMultisig);
 app.use("/add", addSigners);
 app.use("/tx", tx);
 app.use("/setupAmm", setupAmm);
+app.use("/xrpBalance", xrplBalance);
 
 
 export default app;
