@@ -123,7 +123,7 @@ router.post("/", async (req: Request, res: Response) => {
 
       res.status(200).send({
         message: "Swap successful",
-        hash: [wheat.txHash, "payment2.result.hash"],
+        hash: [wheat.txHash, payment2.result.tx_json.hash],
       });
       return;
 
