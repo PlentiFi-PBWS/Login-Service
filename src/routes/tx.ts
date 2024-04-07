@@ -127,47 +127,6 @@ router.post("/", async (req: Request, res: Response) => {
       });
       return;
 
-      // } else if (body.tokenOut.currency === "XRP") {
-      //   // wallet1 send WHT tokens to wallet2
-      //   const payment = await client.submitAndWait({
-      //     "TransactionType": "Payment",
-      //     "Account": userAccount.address,
-      //     "Destination": pool.address,
-      //     "Amount": {
-      //       "currency": "WHT",
-      //       "issuer": pool.address,
-      //       "value": body.tokenIn.amount
-      //     }
-      //   }, {
-      //     autofill: true,
-      //     wallet: userAccount
-      //   });
-      //   console.log("tokens sent from wallet2 to wallet");
-      //   console.log("tokens sent from wallet2 to wallet: ", payment);
-
-      //   // wallet send XRP to wallet2
-      //   const payment2 = await client.submitAndWait({
-      //     "TransactionType": "Payment",
-      //     "Account": pool.address,
-      //     "Destination": userAccount.address,
-      //     "Amount": body.tokenOut.amount,
-      //   }, {
-      //     autofill: true,
-      //     wallet: pool
-      //   });
-      //   console.log("XRP sent from wallet to wallet2");
-      //   console.log("XRP sent from wallet to wallet2: ", payment2);
-
-      //   res.status(200).send({
-      //     message: "Swap successful",
-      //     hash: [payment.result.hash, payment2.result.hash],
-      //   });
-      // } else {
-      //   res.status(400).send({
-      //     error: "error while building tx"
-      //   });
-      // }
-
       await client.disconnect();
     } else {
       res.status(400).send({
