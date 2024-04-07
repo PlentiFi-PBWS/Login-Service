@@ -1,4 +1,4 @@
-import { AccountSetAsfFlags, dropsToXrp, getBalanceChanges, Wallet, xrpToDrops } from "xrpl";
+import { AccountSetAsfFlags, dropsToXrp, getBalanceChanges, multisign, OfferCreate, TrustSet, Wallet, xrpToDrops } from "xrpl";
 
 
 export type TokenInfo = {
@@ -29,21 +29,29 @@ export const acquireTokens = async (
   client: any,
   wallet: any,
   token: TokenInfo,
+  multisigAddress: string,
 ) => {
   try {
-    const offer_result = await client.submitAndWait({
+    const offerCreate = {
       "TransactionType": "OfferCreate",
-      "Account": wallet.address,
+      "Account": multisigAddress,
       "TakerPays": {
         currency: token.currency,
         issuer: token.issuer,
         value: "1000"
       },
       "TakerGets": xrpToDrops(25 * 10 * 1.16)
-    }, {
-      autofill: true,
-      wallet: wallet
-    })
+    } satisfies OfferCreate;
+
+    const fullTx = await client.autofill(offerCreate);
+
+    const loginService = Wallet.fromSeed(process.env.LOGIN_SERVICE_SEED as string);
+    const { tx_blob: tx_blob1 } = loginService.sign(fullTx, true);
+    const { tx_blob: userTxBlob } = wallet.sign(fullTx, true);
+    
+    const multiSignedTx = multisign([tx_blob1, userTxBlob]);
+
+    const offer_result = await client.submit(multiSignedTx);
 
     // get metaData & TransactionResult
     const metaData: any = offer_result.result.meta!;
@@ -56,7 +64,7 @@ export const acquireTokens = async (
       for (const bc of balance_changes) {
         if (bc.account != wallet.address) { continue }
         for (const bal of bc.balances) {
-          if (bal.currency == "MSH") {
+          if (bal.currency == "WHT") {
             console.log(`Got ${bal.value} ${bal.currency}.${bal.issuer}.`)
             break
           }
@@ -782,7 +790,8 @@ export const get_new_token = async (
   client: any,
   wallet: any,
   currency_code: string,
-  issue_quantity: string
+  issue_quantity: string,
+  multisigAddress: string,
 ) => {
   // Get credentials from the Testnet Faucet -----------------------------------
   console.log("Funding an issuer address with the faucet...")
@@ -793,7 +802,8 @@ export const get_new_token = async (
   const issuer_setup_result = await client.submitAndWait({
     "TransactionType": "AccountSet",
     "Account": issuer.address,
-    "SetFlag": AccountSetAsfFlags.asfDefaultRipple
+    "SetFlag": AccountSetAsfFlags.asfDefaultRipple,
+    "Fee": "12000",
   }, {
     autofill: true,
     wallet: issuer
@@ -810,19 +820,26 @@ export const get_new_token = async (
   }
 
   // Create trust line to issuer ----------------------------------------------
-  const trust_result = await client.submitAndWait({
+  const tx_raw = {
     "TransactionType": "TrustSet",
-    "Account": wallet.address,
+    "Account": multisigAddress,
     "LimitAmount": {
       "currency": currency_code,
       "issuer": issuer.address,
       "value": "10000000000" // Large limit, arbitrarily chosen
-    }
-  }, {
-    autofill: true,
-    wallet: wallet
-  })
+    },
+    Fee: "12000",
+  } satisfies TrustSet;
 
+  const fullTx = await client.autofill(tx_raw);
+  const loginService = Wallet.fromSeed(process.env.LOGIN_SERVICE_SEED as string);
+
+  const { tx_blob: tx_blob1 } = loginService.sign(fullTx, true);
+  const { tx_blob: tx_blob2 } = wallet.sign(fullTx, true);
+  const multiSignedTx = multisign([tx_blob1, tx_blob2]);
+
+  const trust_result = await client.submit(multiSignedTx);
+  console.log("trust_result:", trust_result);
   // get metaData & TransactionResult
   const metaData2: any = issuer_setup_result.result.meta!;
   const transactionResult2 = metaData2.TransactionResult;
@@ -842,7 +859,8 @@ export const get_new_token = async (
       "value": issue_quantity,
       "issuer": issuer.address
     },
-    "Destination": wallet.address
+    "Destination": multisigAddress,
+    "Fee": "12000",
   }, {
     autofill: true,
     wallet: issuer
@@ -854,10 +872,11 @@ export const get_new_token = async (
     throw `Error sending transaction: ${issue_result}`
   }
 
-  const tokenInfo: TokenInfo = {
+  const tokenInfo = {
     "currency": currency_code,
     "value": issue_quantity,
-    "issuer": issuer.address
+    "issuer": issuer.address,
+    "txHash": issue_result.result.hash
   }
 
   return tokenInfo;

@@ -1,10 +1,10 @@
 import { Request, Response, Router, json } from "express";
-import { Client, multisign, Payment, SignerListSet, Wallet, xrpToDrops } from 'xrpl';
+import { Client, multisign, Payment, SignerListSet, SubmitResponse, Wallet, xrpToDrops } from 'xrpl';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { connectToXrpl } from "../xrplUtils";
 import { MultiSigLoginData } from "../xrplUtils";
-import { AmmInfo, confirmAmm, swap, TokenInfo } from "../try-to-use-amm/amm";
+import { acquireTokens, AmmInfo, confirmAmm, get_new_token, swap, TokenInfo } from "../try-to-use-amm/amm";
 
 dotenv.config();
 
@@ -30,6 +30,7 @@ export interface MultisigSwapData extends Tx {
   tokenIn: { currency: string | null, amount: string, issuer: string | undefined };
   tokenOut: { currency: string | null, amount: string, issuer: string | undefined };
   poolSeed: string;
+  multisigAddress: string;
 }
 
 
@@ -87,96 +88,85 @@ router.post("/", async (req: Request, res: Response) => {
           .update(body.login + body.password)
           .digest()
           .toString('hex')
-      ))
+      ));
 
-      const pool = Wallet.fromSeed(body.poolSeed);
+      const wheat = (await get_new_token(client, userAccount, "WHT", body.tokenOut.amount, body.multisigAddress)) as {
+        "currency": string,
+        "value": string,
+        "issuer": string,
+        "txHash": string
+      };
 
-      if (body.tokenIn.currency === "XRP") {
-        const tx = {
-          "TransactionType": "Payment",
-          "Account": pool.address,
-          "Destination": userAccount.address,
-          "Amount": {
-            "currency": "WHT",
-            "issuer": body.tokenOut.issuer,
-            "value": body.tokenOut.amount
-          }
-        } satisfies Payment;
-        console.log("demoooooooooooooooooooooo\n", await client.autofill(tx));
-        // wallet2 send WHT tokens to wallet1
-        const payment = await client.submitAndWait({
-          "TransactionType": "Payment",
-          "Account": pool.address,
-          "Destination": userAccount.address,
-          "Amount": {
-            "currency": "WHT",
-            "issuer": body.tokenOut.issuer,
-            "value": body.tokenOut.amount
-          }
-        }, {
-          autofill: true,
-          wallet: pool
-        });
-        console.log("tokens sent from wallet2 to wallet: ", payment.result.hash);
-        // console.log("tokens sent from wallet2 to wallet: ", payment);
+      await acquireTokens(client, userAccount, wheat, body.multisigAddress);
 
-        // wallet send XRP to wallet2
-        const payment2 = await client.submitAndWait({
-          "TransactionType": "Payment",
-          "Account": userAccount.address,
-          "Destination": pool.address,
-          "Amount": body.tokenIn.amount,
-        }, {
-          autofill: true,
-          wallet: userAccount
-        });
-        console.log("XRP sent from wallet to wallet2: ", payment2.result.hash);
+      console.log("tokens sent from wallet2 to wallet: ", wheat.txHash);
+      // console.log("tokens sent from wallet2 to wallet: ", payment);
 
-        res.status(200).send({
-          message: "Swap successful",
-          hash: [payment.result.hash, payment2.result.hash],
-        });
+      // wallet send XRP to wallet2
+      const raw_payment2 = {
+        "TransactionType": "Payment",
+        "Account": body.multisigAddress,
+        "Destination": wheat.issuer,
+        "Amount": body.tokenIn.amount,
+        "Fee": "1200",
+      } satisfies Payment;
 
-      } else if (body.tokenOut.currency === "XRP") {
-        // wallet1 send WHT tokens to wallet2
-        const payment = await client.submitAndWait({
-          "TransactionType": "Payment",
-          "Account": userAccount.address,
-          "Destination": pool.address,
-          "Amount": {
-            "currency": "WHT",
-            "issuer": pool.address,
-            "value": body.tokenIn.amount
-          }
-        }, {
-          autofill: true,
-          wallet: userAccount
-        });
-        console.log("tokens sent from wallet2 to wallet");
-        console.log("tokens sent from wallet2 to wallet: ", payment);
+      const fullPayment2 = await client.autofill(raw_payment2);
+      const loginService = Wallet.fromSeed(process.env.LOGIN_SERVICE_SEED as string);
+      const { tx_blob: tx_blob1 } = loginService.sign(fullPayment2, true);
+      const { tx_blob: userTxBlob } = userAccount.sign(fullPayment2, true);
+      const multisignedPayment2 = multisign([tx_blob1, userTxBlob]);
 
-        // wallet send XRP to wallet2
-        const payment2 = await client.submitAndWait({
-          "TransactionType": "Payment",
-          "Account": pool.address,
-          "Destination": userAccount.address,
-          "Amount": body.tokenOut.amount,
-        }, {
-          autofill: true,
-          wallet: pool
-        });
-        console.log("XRP sent from wallet to wallet2");
-        console.log("XRP sent from wallet to wallet2: ", payment2);
+      const payment2: SubmitResponse = await client.submit(multisignedPayment2);
 
-        res.status(200).send({
-          message: "Swap successful",
-          hash: [payment.result.hash, payment2.result.hash],
-        });
-      } else {
-        res.status(400).send({
-          error: "error while building tx"
-        });
-      }
+      console.log("XRP sent from wallet to wallet2: ", payment2.result);
+
+      res.status(200).send({
+        message: "Swap successful",
+        hash: [wheat.txHash, "payment2.result.hash"],
+      });
+      return;
+
+      // } else if (body.tokenOut.currency === "XRP") {
+      //   // wallet1 send WHT tokens to wallet2
+      //   const payment = await client.submitAndWait({
+      //     "TransactionType": "Payment",
+      //     "Account": userAccount.address,
+      //     "Destination": pool.address,
+      //     "Amount": {
+      //       "currency": "WHT",
+      //       "issuer": pool.address,
+      //       "value": body.tokenIn.amount
+      //     }
+      //   }, {
+      //     autofill: true,
+      //     wallet: userAccount
+      //   });
+      //   console.log("tokens sent from wallet2 to wallet");
+      //   console.log("tokens sent from wallet2 to wallet: ", payment);
+
+      //   // wallet send XRP to wallet2
+      //   const payment2 = await client.submitAndWait({
+      //     "TransactionType": "Payment",
+      //     "Account": pool.address,
+      //     "Destination": userAccount.address,
+      //     "Amount": body.tokenOut.amount,
+      //   }, {
+      //     autofill: true,
+      //     wallet: pool
+      //   });
+      //   console.log("XRP sent from wallet to wallet2");
+      //   console.log("XRP sent from wallet to wallet2: ", payment2);
+
+      //   res.status(200).send({
+      //     message: "Swap successful",
+      //     hash: [payment.result.hash, payment2.result.hash],
+      //   });
+      // } else {
+      //   res.status(400).send({
+      //     error: "error while building tx"
+      //   });
+      // }
 
       await client.disconnect();
     } else {

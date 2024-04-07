@@ -12,7 +12,7 @@ export interface SetupAmmData {
   password: string;
   multisigAddress: string;
 }
-
+// useless
 const router: Router = Router();
 router.use(json());
 router.post("/", async (req: Request, res: Response) => {
@@ -21,7 +21,6 @@ router.post("/", async (req: Request, res: Response) => {
     const data = req.body as SetupAmmData;
 
     const client = await connectToXrpl();
-    const pool = Wallet.generate();
     const signer = Wallet.fromEntropy(Buffer.from(
       crypto
         .createHash('sha256')
@@ -30,10 +29,11 @@ router.post("/", async (req: Request, res: Response) => {
         .toString('hex')
     ));
     console.log("signer: ", signer.address);
-    const out = await initAmm(client, signer, pool, data.multisigAddress);
+    // const out = await initAmm(signer, client, signer, pool, data.multisigAddress);
     await client.disconnect();
     // return the multisig address and the signers addresses
-    res.json(out);
+    // res.json(out);
+    res.json({ msg: "done" });
   } catch (e) {
     console.log(e);
     res.status(500).send({

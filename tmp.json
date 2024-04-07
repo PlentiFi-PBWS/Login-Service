@@ -1,14 +1,9 @@
 {
-  "command": "path_find",
-  "subcommand": "create",
-  "source_account": "rPCKEvHS5pfbv9rmeyD9XHw4VDVUcB1hBA",
-  "source_amount": {
-    "currency": "TST",
-    "value": "200000",
-    "issuer": "rnzKj7qNm5ntyogctbQtNVCPnntMpeizx8"
-  },
-  "destination_account": "rPCKEvHS5pfbv9rmeyD9XHw4VDVUcB1hBA",
-  "destination_amount": {
-    "currency": "XRP"
-  }
+  "multisigAddress": "rfti2mM7EEGGQPf3JhdeULQMmzBEUsmQET",
+  "signers": [
+    "rw2HtbyQYdFvxW81gspYj3di5DpEfy4VCX",
+    "r9ofHEfBve98aTJopQvm5uJ9GjiRQ667PC",
+    "r9QhGpmbrmEPZgkHTKdrgSVtBSnD2Y4GUT"
+  ],
+  "yourSeed": "sEdTrCUkhFUsSqCqfeLDMNiwACaNg8o"
 }

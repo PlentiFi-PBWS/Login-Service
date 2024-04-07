@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export async function initAmm(client: Client, wallet: Wallet, wallet2: Wallet, multisigAddress: string): Promise<{
+export async function initAmm(userAccount: Wallet, client: Client, wallet: Wallet, wallet2: Wallet, multisigAddress: string): Promise<{
   masterSeed: string,
   userSeed: string,
   currency: TokenInfo,
@@ -13,27 +13,19 @@ export async function initAmm(client: Client, wallet: Wallet, wallet2: Wallet, m
   // Get credentials from the Faucet ------------------------------------------
   console.log("Requesting address from the faucet...")
 
-  await client.fundWallet(wallet2);
+  // await client.fundWallet(wallet2);
 
-  console.log("wallet2 funded: ", wallet2.address);
+  // console.log("wallet2 funded: ", wallet2.address);
 
   console.log("wallet funded: ", wallet.address);
 
-  const wheat = await get_new_token(client, wallet2, "WHT", "1000000000")
+  const wheat = await get_new_token(client, userAccount, "WHT", "1000000000", multisigAddress);
   // const salt = await get_new_token(client, wallet2, "SLT", "1000")
 
-  await acquireTokens(client, wallet2, wheat);
+  await acquireTokens(client, userAccount, wheat, multisigAddress);
+  // await acquireTokens(client, wallet2, wheat);
   // await acquireTokens(client, wallet2, salt);
-  console.log("opening trustline ...");
-  console.log("wheat: ", {
-    "TransactionType": "TrustSet",
-    "Account": wallet.address,
-    "LimitAmount": {
-      "currency": wheat.currency,
-      "issuer": wheat.issuer,
-      "value": "100000000000"
-    }
-  });
+
   // OPEN TRUSTLINE
   const trustLineSetup = {
     "TransactionType": "TrustSet",
